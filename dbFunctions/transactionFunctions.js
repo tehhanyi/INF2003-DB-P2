@@ -92,7 +92,20 @@ async function getUserProfitLoss(userId) {
         { $unwind: "$stock" }, // Flatten the array of stock
         {
           $project: {
-            profit_loss: { $multiply: [{ $subtract: ["$stock.stock_price", "$assets.bought_price"] }, "$assets.quantity"] }
+            stock_price: {
+              $cond: {
+                if: { $eq: ["$stock.stock_price", ""] },
+                then: 0,
+                else: "$stock.stock_price"
+              }
+            },
+            bought_price: "$assets.bought_price",
+            quantity: "$assets.quantity"
+          }
+        },
+        {
+          $project: {
+            profit_loss: { $multiply: [{ $subtract: ["$stock_price", "$bought_price"] }, "$quantity"] }
           }
         },
         {

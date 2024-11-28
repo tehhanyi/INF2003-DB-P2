@@ -76,30 +76,3 @@ app.post("/api/findOrCreateUser", async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on http://10.0.2.2:${port}`);
 });
-
-// Example usage
-// async function main() {
-  //works
-  //await findOrCreateUser("1234567888");
-
-  //works
-  //await updateUserName(103, "NewName");
-
-  //works
-  //await deleteUser(103);
-
-  //works
-  //const topAssets = await getTop10AssetsByQuantity();
-  //console.log("Top Assets:", topAssets);
-
-  //works
-  //await updateAssetPriceBySymbol("ACRX", 155.00);
-
-  //works
-  //const portfolio = await getUserPortfolio(87);
-
- //works
-  //const profitLoss = await getUserProfitLoss(86);
-// }
-
-// main().catch(console.error);
