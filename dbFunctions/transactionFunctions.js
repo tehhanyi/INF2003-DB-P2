@@ -82,8 +82,17 @@ async function getUserProfitLoss(userId) {
         },
         { $unwind: "$assets" }, // Flatten the array of assets
         {
+          $lookup: {
+            from: "Stock",
+            localField: "assets.symbol",
+            foreignField: "symbol",
+            as: "stock"
+          }
+        },
+        { $unwind: "$stock" }, // Flatten the array of stock
+        {
           $project: {
-            profit_loss: { $multiply: [{ $subtract: ["$assets.current_price", "$assets.bought_price"] }, "$assets.quantity"] }
+            profit_loss: { $multiply: [{ $subtract: ["$stock.stock_price", "$assets.bought_price"] }, "$assets.quantity"] }
           }
         },
         {
