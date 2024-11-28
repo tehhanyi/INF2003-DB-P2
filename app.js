@@ -3,7 +3,7 @@ const app = express();
 const port = 3000;
 
 const { findOrCreateUser, deleteUser, updateUserName } = require('./dbFunctions/userFunction');  
-const { updateAssetPriceBySymbol,getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
+const { getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
 
 // Add this middleware before any routes
@@ -125,6 +125,15 @@ app.post("/api/addTransactionWithAsset", async (req, res) => {
   }
 });
 
+// API endpoint to get the top 10 assets by quantity
+app.get('/api/top10assets', async (req, res) => {
+  try {
+    const topAssets = await getTop10AssetsByQuantity();
+    res.status(200).json(topAssets);  // Send the result as JSON
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching top 10 assets", error: error.message });
+  }
+});
 
 
 
