@@ -41,6 +41,23 @@ async function fetchRealTimePrices(symbols) {
   }
 }
 
+async function updateStockRealTimePrices(symbols, realTimePrices, db) {
+  try {
+    for (const symbol of symbols) {
+      console.log('symbol:' + symbol)
+      const currentPrice = realTimePrices[symbol] || 0; // If price is not available, set to 0
+
+      await db.collection("Stock").updateOne(
+        { symbol: symbol }, // Match the symbol in the Stock table
+        { $set: { stock_price: currentPrice } } // Update the stock_price field
+      );
+    }
+    console.log("Stock prices updated successfully in the Stock table.");
+  } catch (error) {
+    console.error("Error updating stock prices in the Stock table:", error);
+  }
+}
+
 
 async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, quantity) {
   const client = new MongoClient(uri);
