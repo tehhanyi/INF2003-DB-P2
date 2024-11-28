@@ -60,7 +60,14 @@ app.get("/api/getUserProfitLoss", async (req, res) => {
 
   try {
     const result = await getUserProfitLoss(userId);
-    res.json(result);
+
+    // Add a custom header
+    res.set("Profit-And-Loss", "Your Profit and Loss Details");
+
+    // Send the response
+    res.json({
+      Profit: result,
+    });
   } catch (error) {
     res.status(500).json({
       status: "error",
@@ -68,6 +75,7 @@ app.get("/api/getUserProfitLoss", async (req, res) => {
     });
   }
 });
+
 
 // API endpoint to add transaction with asset
 app.post("/api/addTransactionWithAsset", async (req, res) => {
