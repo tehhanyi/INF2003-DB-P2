@@ -6,10 +6,39 @@ const { findOrCreateUser, deleteUser, updateUserName } = require('./dbFunctions/
 const { updateAssetPriceBySymbol, getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
 
-app.get("api/test", async (req, res) => {
+app.get("/api/test", async (req, res) => {
   res.json({
     status: "success",
     message: "testing connections",
+  });
+}
+);
+
+app.post("/api/getUserPortfolio", async (req, res) => {
+  const userId = req.params.user_id;
+  if (!userId) {
+    return res.status(400).json({
+      status: "error",
+      message: "userId is required",
+    });
+  }
+
+  try {
+    const user = await getUserPortfolio(userId);
+    res.json({
+      status: "success",
+      message: "User created or found!",
+      user_id: user.user_id
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+  res.json({
+    status: "success",
+    message: "User created or found",
   });
 }
 );
