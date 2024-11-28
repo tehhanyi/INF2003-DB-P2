@@ -1,6 +1,45 @@
 require('dotenv').config();
 const { MongoClient, ObjectId } = require('mongodb');
 const uri = process.env.MONGO_URI;
+const axios = require('axios');
+const finnurl = process.env.FINNHUB_URL;
+const finnapiKey = process.env.FINNHUB_APIKEY;
+
+async function fetchRealTimePrices(symbols) {
+
+  try {
+    // Construct the request promises for all symbols
+    const requests = symbols.map(symbol => {
+      return axios.get(finnurl, {
+        params: {
+          symbol: symbol,  // Pass the symbol using the 'params' field
+          token: finnapiKey,    // Include API key in params
+        },
+      });
+    });
+
+    const responses = await Promise.all(requests);
+
+    // Process the responses into a mapping of symbols to current prices
+    const realTimePrices = {};
+    responses.forEach(response => {
+      // Check if the response has the expected 'c' field (current price)
+      if (response.data && response.data.c !== undefined) {
+        const symbol = response.config.params.symbol;  // Get the symbol from the request parameters
+        const { c: currentPrice } = response.data;  // Get the current price from the response
+        realTimePrices[symbol] = currentPrice;  // Map symbol to current price
+      } else {
+        console.warn(`No price data for symbol: ${response.config.params.symbol}`);
+      }
+    });
+
+    return realTimePrices;
+  } catch (error) {
+    console.error('Error fetching real-time prices:', error);
+    return {}; // Return empty object in case of error
+  }
+}
+
 
 async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, quantity) {
   const client = new MongoClient(uri);
@@ -11,10 +50,8 @@ async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, q
     const db = client.db("supabase_data");
     console.log("Using database:", db.databaseName);
 
-    // Create a unique transaction_id (e.g., incremented value or custom logic)
     const transactionId = await db.collection("Transaction").countDocuments() + 1;
 
-    // Insert the transaction with required fields
     const transactionResult = await db.collection("Transaction").insertOne({
       transaction_id: transactionId,
       timestamp: new Date().toISOString(),
@@ -22,9 +59,8 @@ async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, q
     });
     console.log("Transaction insert result:", transactionResult);
 
-    // Insert the asset associated with the transaction
     const assetResult = await db.collection("Asset").insertOne({
-      transaction_id: transactionId, // Reference the transaction_id
+      transaction_id: transactionId, 
       asset_name: assetName,
       symbol: symbol,
       bought_price: boughtPrice,
@@ -39,106 +75,106 @@ async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, q
     await client.close();
   }
 }
+
 async function getUserPortfolio(userId) {
-    const client = new MongoClient(uri);
-    try {
-      await client.connect();
-      const db = client.db("supabase_data");
-  
-      // Aggregation to get the portfolio of a specific user
-      const portfolio = await db.collection("Transaction").aggregate([
-        { $match: { user_id: parseInt(userId) } }, // Ensure type matches
-        {
-          $lookup: {
-            from: "Asset",
-            localField: "transaction_id",
-            foreignField: "transaction_id",
-            as: "assets",
-          },
+  const client = new MongoClient(uri);
+  try {
+    await client.connect();
+    const db = client.db("supabase_data");
+
+    const portfolio = await db.collection("Transaction").aggregate([
+      { $match: { user_id: parseInt(userId) } },
+      {
+        $lookup: {
+          from: "Asset",
+          localField: "transaction_id",
+          foreignField: "transaction_id",
+          as: "assets",
         },
-        { $unwind: "$assets" }, // Flatten assets array
-        {
-          $project: {
-            asset_name: "$assets.asset_name",
-            symbol: "$assets.symbol",
-            bought_price: "$assets.bought_price",
-            quantity: "$assets.quantity",
-            _id: 0,
-          },
+      },
+      { $unwind: "$assets" },
+      {
+        $project: {
+          asset_name: "$assets.asset_name",
+          symbol: "$assets.symbol",
+          bought_price: "$assets.bought_price",
+          quantity: "$assets.quantity",
+          _id: 0,
         },
-      ]).toArray();
-  
-      console.log("Portfolio Result:", portfolio);
-      return portfolio;
-    } catch (error) {
-      console.error("Error fetching user portfolio:", error);
-    } finally {
-      await client.close();
-    }
+      },
+    ]).toArray();
+
+    console.log("Portfolio Result:", portfolio);
+    return portfolio;
+  } catch (error) {
+    console.error("Error fetching user portfolio:", error);
+  } finally {
+    await client.close();
   }
+}
 
 async function getUserProfitLoss(userId) {
-    const client = new MongoClient(uri);
-    try {
-      await client.connect();
-      const db = client.db("supabase_data");
-  
-      // Aggregation pipeline to calculate total profit/loss
-      const result = await db.collection("Transaction").aggregate([
-        { $match: { user_id: userId } }, // Find transactions for the specified user_id
-        {
-          $lookup: {
-            from: "Asset",
-            localField: "transaction_id",
-            foreignField: "transaction_id",
-            as: "assets"
-          }
-        },
-        { $unwind: "$assets" }, // Flatten the array of assets
-        {
-          $lookup: {
-            from: "Stock",
-            localField: "assets.symbol",
-            foreignField: "symbol",
-            as: "stock"
-          }
-        },
-        { $unwind: "$stock" }, // Flatten the array of stock
-        {
-          $project: {
-            stock_price: {
-              $cond: {
-                if: { $eq: ["$stock.stock_price", ""] },
-                then: 0,
-                else: "$stock.stock_price"
-              }
-            },
-            bought_price: "$assets.bought_price",
-            quantity: "$assets.quantity"
-          }
-        },
-        {
-          $project: {
-            profit_loss: { $multiply: [{ $subtract: ["$stock_price", "$bought_price"] }, "$quantity"] }
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total_profit_loss: { $sum: "$profit_loss" } // Sum all profit/loss values
-          }
-        }
-      ]).toArray();
-  
-      // Extract total profit/loss from the aggregation result
-      const totalProfitLoss = result.length > 0 ? result[0].total_profit_loss : 0;
-      console.log("Total Profit and Loss:", totalProfitLoss);
-      return totalProfitLoss;
-    } catch (error) {
-      console.error("Error fetching user total profit and loss:", error);
-    } finally {
-      await client.close();
-    }
-  }
+  const client = new MongoClient(uri);
+  try {
+    await client.connect();
+    const db = client.db("supabase_data");
 
+    const assets = await db.collection("Transaction").aggregate([
+      { $match: { user_id: parseInt(userId, 10) } },
+      {
+        $lookup: {
+          from: "Asset",
+          localField: "transaction_id",
+          foreignField: "transaction_id",
+          as: "assets",
+        },
+      },
+      { $unwind: "$assets" },
+      {
+        $project: {
+          bought_price: "$assets.bought_price",
+          quantity: "$assets.quantity",
+          symbol: "$assets.symbol",
+        },
+      },
+    ]).toArray();
+
+    let symbolsToSubscribe = assets.map(asset => asset.symbol);
+    const realTimePrices = await fetchRealTimePrices(symbolsToSubscribe);
+
+    //update to stock with realTimePrices
+    await updateStockRealTimePrices(symbolsToSubscribe, realTimePrices, db);
+
+    let totalProfitLoss = 0;
+    for (const asset of assets) {
+      const currentPrice = realTimePrices[asset.symbol] || 0; // If price is not available, set to 0
+      const profitLoss = (currentPrice - asset.bought_price) * asset.quantity;
+      totalProfitLoss += profitLoss;
+    }
+
+    console.log("Total Profit and Loss:", totalProfitLoss);
+    return totalProfitLoss;
+  } catch (error) {
+    console.error("Error fetching user total profit and loss:", error);
+  } finally {
+    await client.close();
+  }
+}
+
+async function updateStockRealTimePrices(symbols, realTimePrices, db) {
+  try {
+    for (const symbol of symbols) {
+      console.log('symbol:' + symbol)
+      const currentPrice = realTimePrices[symbol] || 0; // If price is not available, set to 0
+
+      await db.collection("Stock").updateOne(
+        { symbol: symbol }, // Match the symbol in the Stock table
+        { $set: { stock_price: currentPrice } } // Update the stock_price field
+      );
+    }
+    console.log("Stock prices updated successfully in the Stock table.");
+  } catch (error) {
+    console.error("Error updating stock prices in the Stock table:", error);
+  }
+}
 module.exports = { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss };
