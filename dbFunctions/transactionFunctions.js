@@ -4,6 +4,7 @@ const uri = process.env.MONGO_URI;
 const axios = require('axios');
 const finnurl = process.env.FINNHUB_URL;
 const finnapiKey = process.env.FINNHUB_APIKEY;
+const { updateAssetPriceBySymbol } = require('./assetFunctions');
 
 async function fetchRealTimePrices(symbols) {
 
@@ -142,8 +143,7 @@ async function getUserProfitLoss(userId) {
     let symbolsToSubscribe = assets.map(asset => asset.symbol);
     const realTimePrices = await fetchRealTimePrices(symbolsToSubscribe);
 
-    //update to stock with realTimePrices
-    await updateStockRealTimePrices(symbolsToSubscribe, realTimePrices, db);
+    await updateAssetPriceBySymbol(symbolsToSubscribe, realTimePrices, db);
 
     let totalProfitLoss = 0;
     for (const asset of assets) {
@@ -158,23 +158,6 @@ async function getUserProfitLoss(userId) {
     console.error("Error fetching user total profit and loss:", error);
   } finally {
     await client.close();
-  }
-}
-
-async function updateStockRealTimePrices(symbols, realTimePrices, db) {
-  try {
-    for (const symbol of symbols) {
-      console.log('symbol:' + symbol)
-      const currentPrice = realTimePrices[symbol] || 0; // If price is not available, set to 0
-
-      await db.collection("Stock").updateOne(
-        { symbol: symbol }, // Match the symbol in the Stock table
-        { $set: { stock_price: currentPrice } } // Update the stock_price field
-      );
-    }
-    console.log("Stock prices updated successfully in the Stock table.");
-  } catch (error) {
-    console.error("Error updating stock prices in the Stock table:", error);
   }
 }
 module.exports = { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss };

@@ -3,7 +3,7 @@ const app = express();
 const port = 3000;
 
 const { findOrCreateUser, deleteUser, updateUserName } = require('./dbFunctions/userFunction');  
-const { updateAssetPriceBySymbol, getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
+const { updateAssetPriceBySymbol,getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
 
 // Add this middleware before any routes

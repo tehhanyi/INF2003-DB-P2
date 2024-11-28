@@ -2,23 +2,21 @@ require('dotenv').config();
 const { MongoClient } = require('mongodb');
 const uri = process.env.MONGO_URI;
 
-async function updateAssetPriceBySymbol(symbol, newPrice) {
+async function updateAssetPriceBySymbol(symbols, realTimePrices) {
     const client = new MongoClient(uri);
     try {
       await client.connect();
       const db = client.db("supabase_data");
       const collection = db.collection("Stock");
   
-      // Update stock price based on symbol
-      const result = await collection.updateOne(
-        { symbol: symbol },
-        { $set: { stock_price: newPrice } }
-      );
+      for (const symbol of symbols) {
+        console.log('symbol:' + symbol)
+        const currentPrice = realTimePrices[symbol] || 0; // If price is not available, set to 0
   
-      if (result.modifiedCount > 0) {
-        console.log(`Updated price of ${symbol} to ${newPrice}`);
-      } else {
-        console.log(`No document found with symbol: ${symbol}`);
+        const result = await collection.updateOne(
+          { symbol: symbol },
+          { $set: { stock_price: currentPrice } }
+        );
       }
     } catch (error) {
       console.error("Error updating stock price:", error);
