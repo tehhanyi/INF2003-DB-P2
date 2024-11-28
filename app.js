@@ -6,6 +6,9 @@ const { findOrCreateUser, deleteUser, updateUserName } = require('./dbFunctions/
 const { updateAssetPriceBySymbol, getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
 
+// Add this middleware before any routes
+app.use(express.json());  // To parse JSON bodies in POST requests
+
 app.get("/api/test", async (req, res) => {
   res.json({
     status: "success",
@@ -14,7 +17,7 @@ app.get("/api/test", async (req, res) => {
 }
 );
 
-app.post("/api/getUserPortfolio", async (req, res) => {
+app.get("/api/getUserPortfolio", async (req, res) => {
   const userId = req.query.userId; // Get the userId from the query string
   if (!userId) {
     return res.status(400).json({
@@ -71,6 +74,58 @@ app.post("/api/findOrCreateUser", async (req, res) => {
     });
   }
 });
+
+app.get("/api/getUserProfitLoss", async (req, res) => {
+  const userId = req.query.userId; // Get the userId from the query string
+  if (!userId) {
+    return res.status(400).json({
+      status: "error",
+      message: "userId is required",
+    });
+  }
+
+  try {
+    const result = await getUserProfitLoss(userId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+});
+
+// API endpoint to add transaction with asset
+app.post("/api/addTransactionWithAsset", async (req, res) => {
+  console.log(req.body); // Log the body to check if it's being sent correctly
+
+  const { userId, assetName, symbol, boughtPrice, quantity } = req.body;
+
+  if (!userId || !assetName || !symbol || !boughtPrice || !quantity) {
+    return res.status(400).json({
+      status: "error",
+      message: "All fields are required (userId, assetName, symbol, boughtPrice, quantity)",
+    });
+  }
+
+  try {
+    // Call the function to add transaction with asset
+    await addTransactionWithAsset(userId, assetName, symbol, boughtPrice, quantity);
+    res.json({
+      status: "success",
+      message: "Transaction and asset added successfully",
+    });
+  } catch (error) {
+    console.error("Error adding transaction and asset:", error);  // Log the error details
+    res.status(500).json({
+      status: "error",
+      message: "An error occurred while adding the transaction and asset",
+      error: error.message || error, // Return the error message for debugging
+    });
+  }
+});
+
+
 
 
 app.listen(port, () => {
