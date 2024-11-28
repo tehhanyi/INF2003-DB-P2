@@ -37,8 +37,7 @@ async function findOrCreateUser(phone_number) {
   }
 }
 
-module.exports = { findOrCreateUser };
-
+// module.exports = { findOrCreateUser };
 
 async function deleteUser(userId) {
     const client = new MongoClient(uri);
