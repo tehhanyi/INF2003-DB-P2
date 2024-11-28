@@ -24,7 +24,7 @@ async function main() {
   //const portfolio = await getUserPortfolio(87);
 
  //works
-  //const profitLoss = await getUserProfitLoss(86);
+  const profitLoss = await getUserProfitLoss(86);
 }
 
 main().catch(console.error);
