@@ -49,6 +49,27 @@ app.get("/api/getUserPortfolio", async (req, res) => {
   }
 });
 
+app.get("/api/getUserProfitLoss", async (req, res) => {
+  const userId = req.query.userId; // Get the userId from the query string
+  if (!userId) {
+    return res.status(400).json({
+      status: "error",
+      message: "userId is required",
+    });
+  }
+
+  try {
+    const result = await getUserProfitLoss(userId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+});
+
+// API endpoint to add transaction with asset
 app.post("/api/addTransactionWithAsset", async (req, res) => {
   console.log(req.body); // Log the body to check if it's being sent correctly
 
@@ -87,6 +108,8 @@ app.get('/api/top10assets', async (req, res) => {
     res.status(500).json({ message: "Error fetching top 10 assets", error: error.message });
   }
 });
+
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://10.0.2.2:${port}`);
