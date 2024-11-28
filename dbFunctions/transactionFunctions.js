@@ -33,14 +33,14 @@ async function getUserPortfolio(userId) {
   
       // Aggregation to get the portfolio of a specific user
       const portfolio = await db.collection("Transaction").aggregate([
-        { $match: { user_id: userId } }, // Match transactions for the specified user_id
+        { $match: { user_id: parseInt(userId) } }, // Ensure type matches
         {
           $lookup: {
             from: "Asset",
             localField: "transaction_id",
             foreignField: "transaction_id",
-            as: "assets"
-          }
+            as: "assets",
+          },
         },
         { $unwind: "$assets" }, // Flatten assets array
         {
@@ -49,9 +49,9 @@ async function getUserPortfolio(userId) {
             symbol: "$assets.symbol",
             bought_price: "$assets.bought_price",
             quantity: "$assets.quantity",
-            _id: 0
-          }
-        }
+            _id: 0,
+          },
+        },
       ]).toArray();
   
       console.log("Portfolio Result:", portfolio);
