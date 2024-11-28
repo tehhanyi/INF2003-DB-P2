@@ -6,25 +6,39 @@ async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, q
   const client = new MongoClient(uri);
   try {
     await client.connect();
+    console.log("Connected to MongoDB");
+    
     const db = client.db("supabase_data");
+    console.log("Using database:", db.databaseName);
 
-    const transactionResult = await db.collection("Transaction").insertOne({ user_id: new ObjectId(userId) });
-    const transactionId = transactionResult.insertedId;
+    // Create a unique transaction_id (e.g., incremented value or custom logic)
+    const transactionId = await db.collection("Transaction").countDocuments() + 1;
 
-    await db.collection("Asset").insertOne({
+    // Insert the transaction with required fields
+    const transactionResult = await db.collection("Transaction").insertOne({
       transaction_id: transactionId,
+      timestamp: new Date().toISOString(),
+      user_id: userId,
+    });
+    console.log("Transaction insert result:", transactionResult);
+
+    // Insert the asset associated with the transaction
+    const assetResult = await db.collection("Asset").insertOne({
+      transaction_id: transactionId, // Reference the transaction_id
       asset_name: assetName,
       symbol: symbol,
       bought_price: boughtPrice,
       quantity: quantity,
     });
+    console.log("Asset insert result:", assetResult);
 
     console.log("Transaction and asset added successfully");
+  } catch (error) {
+    console.error("Error adding transaction with asset:", error);
   } finally {
     await client.close();
   }
 }
-
 async function getUserPortfolio(userId) {
     const client = new MongoClient(uri);
     try {
