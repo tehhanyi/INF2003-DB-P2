@@ -1,20 +1,18 @@
 require('dotenv').config();
-const { MongoClient, ObjectId } = require('mongodb');
-const uri = process.env.MONGO_URI;
+const { MongoClient} = require('mongodb');
 const axios = require('axios');
-const finnurl = process.env.FINNHUB_URL;
-const finnapiKey = process.env.FINNHUB_APIKEY;
+const mongoUri = process.env.MONGO_URI;
+const finnUrl = process.env.FINNHUB_URL;
 const { updateAssetPriceBySymbol } = require('./assetFunctions');
 
 async function fetchRealTimePrices(symbols) {
 
   try {
-    // Construct the request promises for all symbols
     const requests = symbols.map(symbol => {
-      return axios.get(finnurl, {
+      return axios.get(finnUrl, {
         params: {
-          symbol: symbol,  // Pass the symbol using the 'params' field
-          token: finnapiKey,    // Include API key in params
+          symbol: symbol,
+          token: process.env.FINNHUB_APIKEY,
         },
       });
     });
@@ -24,11 +22,10 @@ async function fetchRealTimePrices(symbols) {
     // Process the responses into a mapping of symbols to current prices
     const realTimePrices = {};
     responses.forEach(response => {
-      // Check if the response has the expected 'c' field (current price)
       if (response.data && response.data.c !== undefined) {
-        const symbol = response.config.params.symbol;  // Get the symbol from the request parameters
-        const { c: currentPrice } = response.data;  // Get the current price from the response
-        realTimePrices[symbol] = currentPrice;  // Map symbol to current price
+        const symbol = response.config.params.symbol;
+        const { c: currentPrice } = response.data;
+        realTimePrices[symbol] = currentPrice;
       } else {
         console.warn(`No price data for symbol: ${response.config.params.symbol}`);
       }
@@ -37,12 +34,12 @@ async function fetchRealTimePrices(symbols) {
     return realTimePrices;
   } catch (error) {
     console.error('Error fetching real-time prices:', error);
-    return {}; // Return empty object in case of error
+    return {};
   }
 }
 
 async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, quantity) {
-  const client = new MongoClient(uri);
+  const client = new MongoClient(mongoUri);
   try {
     await client.connect();    
     const db = client.db("supabase_data");
@@ -75,7 +72,7 @@ async function addTransactionWithAsset(userId, assetName, symbol, boughtPrice, q
 }
 
 async function getUserPortfolio(userId) {
-  const client = new MongoClient(uri);
+  const client = new MongoClient(mongoUri);
   try {
     await client.connect();
     const db = client.db("supabase_data");
@@ -112,7 +109,7 @@ async function getUserPortfolio(userId) {
 }
 
 async function getUserProfitLoss(userId) {
-  const client = new MongoClient(uri);
+  const client = new MongoClient(mongoUri);
   try {
     await client.connect();
     const db = client.db("supabase_data");
@@ -144,7 +141,7 @@ async function getUserProfitLoss(userId) {
 
     let totalProfitLoss = 0;
     for (const asset of assets) {
-      const currentPrice = realTimePrices[asset.symbol] || 0; // If price is not available, set to 0
+      const currentPrice = realTimePrices[asset.symbol] || 0;
       const profitLoss = (currentPrice - asset.bought_price) * asset.quantity;
       totalProfitLoss += profitLoss;
     }

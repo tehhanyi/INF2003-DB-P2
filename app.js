@@ -2,12 +2,9 @@ const express = require('express');
 const app = express();
 const port = 3000;
 
-const { findOrCreateUser, deleteUser, updateUserName } = require('./dbFunctions/userFunction');  
 const { getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
-
-// Add this middleware before any routes
-app.use(express.json());  // To parse JSON bodies in POST requests
+app.use(express.json());
 
 app.get("/api/test", async (req, res) => {
   res.json({
@@ -17,8 +14,9 @@ app.get("/api/test", async (req, res) => {
 }
 );
 
+// API endpoint to get user transactions portfolio
 app.get("/api/getUserPortfolio", async (req, res) => {
-  const userId = req.query.userId; // Get the userId from the query string
+  const userId = req.query.userId;
   if (!userId) {
     return res.status(400).json({
       status: "error",
@@ -27,13 +25,13 @@ app.get("/api/getUserPortfolio", async (req, res) => {
   }
 
   try {
-    const portfolio = await getUserPortfolio(userId);  // Fetch user portfolio
+    const portfolio = await getUserPortfolio(userId);
     if (portfolio.length > 0) {
       res.json({
         status: "success",
         message: "User portfolio found!",
         user_id: userId,
-        portfolio: portfolio, // Send the portfolio details
+        portfolio: portfolio,
       });
     } else {
       res.status(404).json({
@@ -49,8 +47,9 @@ app.get("/api/getUserPortfolio", async (req, res) => {
   }
 });
 
+// API endpoint to calculate user P&L
 app.get("/api/getUserProfitLoss", async (req, res) => {
-  const userId = req.query.userId; // Get the userId from the query string
+  const userId = req.query.userId;
   if (!userId) {
     return res.status(400).json({
       status: "error",
@@ -60,11 +59,7 @@ app.get("/api/getUserProfitLoss", async (req, res) => {
 
   try {
     const result = await getUserProfitLoss(userId);
-
-    // Add a custom header
     res.set("Profit-And-Loss", "Your Profit and Loss Details");
-
-    // Send the response
     res.json({
       Profit: result,
     });
@@ -79,7 +74,7 @@ app.get("/api/getUserProfitLoss", async (req, res) => {
 
 // API endpoint to add transaction with asset
 app.post("/api/addTransactionWithAsset", async (req, res) => {
-  console.log(req.body); // Log the body to check if it's being sent correctly
+  console.log(req.body);
 
   const { userId, assetName, symbol, boughtPrice, quantity } = req.body;
 
@@ -91,18 +86,17 @@ app.post("/api/addTransactionWithAsset", async (req, res) => {
   }
 
   try {
-    // Call the function to add transaction with asset
     await addTransactionWithAsset(userId, assetName, symbol, boughtPrice, quantity);
     res.json({
       status: "success",
       message: "Transaction and asset added successfully",
     });
   } catch (error) {
-    console.error("Error adding transaction and asset:", error);  // Log the error details
+    console.error("Error adding transaction and asset:", error);
     res.status(500).json({
       status: "error",
       message: "An error occurred while adding the transaction and asset",
-      error: error.message || error, // Return the error message for debugging
+      error: error.message || error
     });
   }
 });
@@ -111,13 +105,11 @@ app.post("/api/addTransactionWithAsset", async (req, res) => {
 app.get('/api/top10assets', async (req, res) => {
   try {
     const topAssets = await getTop10AssetsByQuantity();
-    res.status(200).json(topAssets);  // Send the result as JSON
+    res.status(200).json(topAssets);
   } catch (error) {
     res.status(500).json({ message: "Error fetching top 10 assets", error: error.message });
   }
 });
-
-
 
 app.listen(port, () => {
   console.log(`Server is running on http://10.0.2.2:${port}`);
