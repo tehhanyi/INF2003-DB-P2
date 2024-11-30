@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 const { getTop10AssetsByQuantity } = require('./dbFunctions/assetFunctions');
 const { addTransactionWithAsset, getUserPortfolio, getUserProfitLoss } = require('./dbFunctions/transactionFunctions');
@@ -112,5 +112,5 @@ app.get('/api/top10assets', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on http://10.0.2.2:${port}`);
+  console.log(`Server is running on port ${port}`);
 });
